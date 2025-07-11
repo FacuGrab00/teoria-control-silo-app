@@ -2,29 +2,64 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Datos del ESP32</title>
+  <title>Lecturas ESP32</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
 </head>
 <body>
   <h1>Lecturas del ESP32</h1>
 
-  <div class="card">
-    <h2>Temperatura</h2>
-    <div id="temperatura">-- °C</div>
+  <div class="cards-container">
+    <div class="card">
+      <h2>Temperatura</h2>
+      <div id="temperatura">-- °C</div>
+    </div>
+
+    <div class="card">
+      <h2>Humedad</h2>
+      <div id="humedad">-- %</div>
+    </div>
+
+    <div class="card">
+      <h2>Altura (Distancia)</h2>
+      <div id="distancia">-- cm</div>
+    </div>
+
+    <div class="card">
+      <h2>Volumen</h2>
+      <div id="volumen">-- m³</div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Humedad</h2>
-    <div id="humedad">-- %</div>
+  <div class="inputs-container">
+    <input type="number" id="input-temp" placeholder="Nueva temperatura">
+    <input type="number" id="input-hum" placeholder="Nueva humedad">
+    <input type="number" id="input-dist" placeholder="Nueva altura (distancia)">
   </div>
 
-  <div class="card">
-    <h2>Distancia</h2>
-    <div id="distancia">-- cm</div>
+  <div class="button-container">
+    <button id="enviar-param">Enviar parámetros</button>
   </div>
+
+  <h2>Gráfico de Temperatura</h2>
+  <canvas id="graficoTemp" width="500" height="200"></canvas>
+
+  <h2>Gráfico de Humedad</h2>
+  <canvas id="graficoHum" width="500" height="200"></canvas>
+
+  <h2>Gráfico de Volumen</h2>
+  <canvas id="graficoVol" width="500" height="200"></canvas>
 
   <footer>ESP32 + Flask + MQTT + Socket.IO</footer>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <p id="modal-text">¡Parámetros enviados!</p>
+      <button id="modal-close">Cerrar</button>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
