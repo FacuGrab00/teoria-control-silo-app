@@ -67,20 +67,25 @@ PIN_RELE = 17
 GPIO.setup(PIN_RELE, GPIO.OUT)
 GPIO.output(PIN_RELE, GPIO.LOW)
 
-def controlar_ventilador_automatico(humedad=None, temperatura=None, volumen=None):
+def controlar_ventilador_automatico():
     if modo_ventilador != ModoVentilador.AUTOMATICO:
         print("⚙️ Modo manual")
         return
 
+    humedad = datos_sensores.get("humedad")
+    temperatura = datos_sensores.get("temperatura")
+    volumen = datos_sensores.get("volumen")
+
     encender = False
 
-    print("Evaluando condición de encendido")
+    print(f"Evaluando condición de encendido (automático):")
+    print(f"  humedad: {humedad}, temperatura: {temperatura}, volumen: {volumen}")
 
-    if ACTIVO_HUMEDAD and humedad is not None and humedad >= UMBRAL_HUMEDAD:
+    if ACTIVO_HUMEDAD and isinstance(humedad, (int, float)) and humedad >= UMBRAL_HUMEDAD:
         encender = True
-    if ACTIVO_TEMPERATURA and temperatura is not None and temperatura >= UMBRAL_TEMPERATURA:
+    if ACTIVO_TEMPERATURA and isinstance(temperatura, (int, float)) and temperatura >= UMBRAL_TEMPERATURA:
         encender = True
-    if ACTIVO_VOLUMEN and volumen is not None and volumen >= UMBRAL_VOLUMEN:
+    if ACTIVO_VOLUMEN and isinstance(volumen, (int, float)) and volumen >= UMBRAL_VOLUMEN:
         encender = True
 
     if encender:
@@ -111,7 +116,7 @@ def on_message(client, userdata, msg):
         datos_sensores["temperatura"] = temperatura
         db.insertar_lectura("dht22", "humedad", humedad, "%")
         db.insertar_lectura("dht22", "temperatura", temperatura, "°C")
-        controlar_ventilador_automatico(humedad=humedad, temperatura=temperatura)
+        controlar_ventilador_automatico()
     elif topic == "sensor/distancia":
         distancia = float(data.get("distancia", 0))
         datos_sensores["distancia"] = distancia
@@ -126,7 +131,7 @@ def on_message(client, userdata, msg):
         datos_sensores["volumen"] = volumen
         db.insertar_lectura("ultrasonico", "distancia", distancia, "cm")
         db.insertar_lectura("ultrasonico", "volumen", volumen, "m³")
-        controlar_ventilador_automatico(volumen=volumen)
+        controlar_ventilador_automatico()
 
     socketio.emit('nuevos_datos', datos_sensores)
 
