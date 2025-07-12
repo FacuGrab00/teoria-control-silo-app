@@ -4,8 +4,8 @@
 {% block title %}Inicio{% endblock %}
 
 {% block extra_head %}
-<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
-<script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -58,5 +58,5 @@
 <h2>Gráfico de Volumen</h2>
 <canvas id="graficoVol" width="500" height="200"></canvas>
 
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 {% endblock %}

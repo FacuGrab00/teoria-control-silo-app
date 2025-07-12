@@ -149,13 +149,13 @@ $(document).ready(async () => {
   const $btnApagado = $('.btn-estado-off');
   const $btnPrendido = $('.btn-estado-on');
 
-  $('.btn-group-estado button').click(async function() {
+  $('.btn-group-modo button').click(async function() {
     const nuevoEstado = $(this).data('estado'); // 'apagado' o 'encendido'
     let estadoValor = 2; // default apagado
     if (nuevoEstado === 'encendido') estadoValor = 1;
 
     // Bloquear botones mientras se procesa
-    $('.btn-group-estado button').prop('disabled', true);
+    $('.btn-group-modo button').prop('disabled', true);
 
     try {
       const res = await fetch('/ventilador', {
@@ -181,7 +181,7 @@ $(document).ready(async () => {
       alert("Error de comunicación con el servidor");
       console.error(e);
     } finally {
-      $('.btn-group-estado button').prop('disabled', false);
+      $('.btn-group-modo button').prop('disabled', false);
     }
   });
 });
