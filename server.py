@@ -109,7 +109,7 @@ def on_message(client, userdata, msg):
         datos_sensores["temperatura"] = temperatura
         db.insertar_lectura("dht22", "humedad", humedad, "%")
         db.insertar_lectura("dht22", "temperatura", temperatura, "°C")
-        controlar_ventilador(humedad=humedad, temperatura=temperatura)
+        controlar_ventilador_automatico(humedad=humedad, temperatura=temperatura)
     elif topic == "sensor/distancia":
         distancia = float(data.get("distancia", 0))
         datos_sensores["distancia"] = distancia
@@ -124,7 +124,7 @@ def on_message(client, userdata, msg):
         datos_sensores["volumen"] = volumen
         db.insertar_lectura("ultrasonico", "distancia", distancia, "cm")
         db.insertar_lectura("ultrasonico", "volumen", volumen, "m³")
-        controlar_ventilador(volumen=volumen)
+        controlar_ventilador_automatico(volumen=volumen)
 
     socketio.emit('nuevos_datos', datos_sensores)
 
