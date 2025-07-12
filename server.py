@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO
 import paho.mqtt.client as mqtt
 import json
@@ -51,21 +51,15 @@ datos_sensores = {
     "volumen": "N/D"
 }
 
-# Parametros del silo
-ALTURA_SILO = 1.0
-RADIO_SILO = 0.05
+ALTURA_SILO = db.obtener_parametro('altura_silo', 1.0)
+RADIO_SILO = db.obtener_parametro('radio_silo', 0.05)
 
-# Umbrales con valores por defecto
-UMBRAL_HUMEDAD = 50
-UMBRAL_TEMPERATURA = 30
-UMBRAL_VOLUMEN = 0.2
+UMBRAL_HUMEDAD, _, ACTIVO_HUMEDAD = db.obtener_umbral('humedad', 50)
+UMBRAL_TEMPERATURA, _, ACTIVO_TEMPERATURA = db.obtener_umbral('temperatura', 30)
+UMBRAL_VOLUMEN, _, ACTIVO_VOLUMEN = db.obtener_umbral('volumen', 0.2)
 
-# Flags para activar/desactivar umbrales en condición automática
-ACTIVO_HUMEDAD = True
-ACTIVO_TEMPERATURA = True
-ACTIVO_VOLUMEN = False
-
-modo_ventilador = ModoVentilador.AUTOMATICO
+modo_ventilador_val = db.obtener_modo_ventilador()
+modo_ventilador = ModoVentilador(modo_ventilador_val)
 
 # GPIO setup
 GPIO.setmode(GPIO.BCM)
@@ -143,7 +137,8 @@ client.loop_start()
 
 @app.route('/')
 def index():
-    return render_template("index.html", active_page="inicio")
+    modo = modo_ventilador.name.lower()
+    return render_template("index.html", active_page="inicio", modo=modo)
 
 @app.route('/configuracion')
 def configuracion():
@@ -166,6 +161,11 @@ def configuracion():
         modo=modo
     )
 
+@app.route('/datos_historicos')
+def datos_historicos():
+    datos = db.obtener_ultimas_lecturas(20)
+    return jsonify(datos)
+
 @app.route('/parametros', methods=['GET'])
 def obtener_parametros():
     return {
@@ -187,14 +187,19 @@ def actualizar_parametros():
 
     if "altura_silo" in data:
         ALTURA_SILO = float(data["altura_silo"])
+        db.guardar_parametro('altura_silo', ALTURA_SILO, "m")
     if "radio_silo" in data:
         RADIO_SILO = float(data["radio_silo"])
+        db.guardar_parametro('radio_silo', RADIO_SILO, "m")
     if "umbral_humedad" in data:
         UMBRAL_HUMEDAD = float(data["umbral_humedad"])
+        db.guardar_umbral('humedad', UMBRAL_HUMEDAD, "%", ACTIVO_HUMEDAD)
     if "umbral_temperatura" in data:
         UMBRAL_TEMPERATURA = float(data["umbral_temperatura"])
+        db.guardar_umbral('temperatura', UMBRAL_TEMPERATURA, "°C", ACTIVO_TEMPERATURA)
     if "umbral_volumen" in data:
         UMBRAL_VOLUMEN = float(data["umbral_volumen"])
+        db.guardar_umbral('volumen', UMBRAL_VOLUMEN, "m³", ACTIVO_VOLUMEN)
 
     return {
         "mensaje": "Parámetros y umbrales actualizados",
@@ -225,10 +230,13 @@ def activar_umbrales():
 
     if "humedad" in data:
         ACTIVO_HUMEDAD = bool(data["humedad"])
+        db.guardar_umbral('humedad', UMBRAL_HUMEDAD, "%", ACTIVO_HUMEDAD)
     if "temperatura" in data:
         ACTIVO_TEMPERATURA = bool(data["temperatura"])
+        db.guardar_umbral('temperatura', UMBRAL_TEMPERATURA, "°C", ACTIVO_TEMPERATURA)
     if "volumen" in data:
         ACTIVO_VOLUMEN = bool(data["volumen"])
+        db.guardar_umbral('volumen', UMBRAL_VOLUMEN, "m³", ACTIVO_VOLUMEN)
 
     return {
         "mensaje": "Activación de umbrales actualizada",
@@ -241,10 +249,7 @@ def activar_umbrales():
 
 @app.route('/modo_ventilador', methods=['GET'])
 def obtener_modo_ventilador():
-    return {
-        "modo": modo_ventilador.value,
-        "nombre": modo_ventilador.name.lower()
-    }
+    return {"modo": modo_ventilador.value,"nombre": modo_ventilador.name.lower()}
 
 @app.route('/modo_ventilador', methods=['POST'])
 def cambiar_modo_ventilador():
@@ -255,13 +260,21 @@ def cambiar_modo_ventilador():
     if not data or "modo" not in data:
         return {"error": "Falta campo 'modo'"}, 400
 
+    modo_valor = data["modo"]
+
+    # Validar que sea int
+    if not isinstance(modo_valor, int):
+        return {"error": "'modo' debe ser un entero"}, 400
+
     try:
-        modo_ventilador = ModoVentilador(data["modo"])
+        modo_ventilador = ModoVentilador(modo_valor)
     except ValueError:
         opciones = {e.value: e.name.lower() for e in ModoVentilador}
         return {
             "error": f"Modo inválido. Use uno de: {opciones}"
         }, 400
+        
+    db.guardar_modo_ventilador(modo_ventilador.value)
 
     GPIO.output(PIN_RELE, GPIO.LOW)
     
@@ -279,10 +292,16 @@ def controlar_ventilador():
     if not data or "estado" not in data:
         return {"error": "Falta campo 'estado'"}, 400
 
+    estado_valor = data["estado"]
+
+    # Validar que sea int
+    if not isinstance(estado_valor, int):
+        return {"error": "'estado' debe ser un entero"}, 400
+
     try:
-        estado = EstadoVentilador(data["estado"])
+        estado = EstadoVentilador(estado_valor)
     except ValueError:
-        return {"error": "Valor inválido para 'estado'. Use 'encendido: (1)' o 'apagado: (2)'."}, 400
+        return {"error": "Valor inválido para 'estado'. Use 'encendido: 1' o 'apagado: 2'."}, 400
 
     if estado == EstadoVentilador.ENCENDIDO:
         GPIO.output(PIN_RELE, GPIO.HIGH)
@@ -291,6 +310,7 @@ def controlar_ventilador():
         GPIO.output(PIN_RELE, GPIO.LOW)
         return {"mensaje": "Ventilador APAGADO"}
 
+
 if __name__ == "__main__":
     try:
         print("🚀 Servidor Flask + SocketIO iniciado en 0.0.0.0:5000")
@@ -298,3 +318,7 @@ if __name__ == "__main__":
     finally:
         GPIO.cleanup()
         db.cerrar_conexion()
+
+
+
+

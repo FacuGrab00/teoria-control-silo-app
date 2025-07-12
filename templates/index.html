@@ -4,43 +4,59 @@
 {% block title %}Inicio{% endblock %}
 
 {% block extra_head %}
-  <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='chart.min.js') }}"></script>
 {% endblock %}
 
 {% block content %}
-  <h2>Lecturas del ESP32</h2>
+<h2>Lecturas del ESP32</h2>
 
-  <div class="cards-container">
-    <div class="card">
-      <h3 class="card-title">Temperatura</h2>
-        <div id="temperatura">-- °C</div>
-    </div>
-
-    <div class="card">
-      <h3 class="card-title">Humedad</h2>
-        <div id="humedad">-- %</div>
-    </div>
-
-    <div class="card">
-      <h3 class="card-title">Altura</h2>
-        <div id="distancia">-- cm</div>
-    </div>
-
-    <div class="card">
-      <h3 class="card-title">Volumen</h2>
-        <div id="volumen">-- m³</div>
-    </div>
+<div class="cards-container">
+  <div class="card">
+    <h3 class="card-title">Temperatura</h2>
+      <div id="temperatura">-- °C</div>
   </div>
 
-  <h2>Gráfico de Temperatura</h2>
-  <canvas id="graficoTemp" width="500" height="200"></canvas>
+  <div class="card">
+    <h3 class="card-title">Humedad</h2>
+      <div id="humedad">-- %</div>
+  </div>
 
-  <h2>Gráfico de Humedad</h2>
-  <canvas id="graficoHum" width="500" height="200"></canvas>
+  <div class="card">
+    <h3 class="card-title">Altura</h2>
+      <div id="distancia">-- cm</div>
+  </div>
 
-  <h2>Gráfico de Volumen</h2>
-  <canvas id="graficoVol" width="500" height="200"></canvas>
+  <div class="card">
+    <h3 class="card-title">Volumen</h2>
+      <div id="volumen">-- m³</div>
+  </div>
+</div>
 
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+{% if modo == 'manual' %}
+<div class="cards-switches">
+  <div class="card-switch modo-toggle-group">
+    <span>Estado Ventilador</span>
+    <div class="btn-group-modo">
+      <button type="button" class="btn-estado-off active" data-estado="apagado">
+        Apagado
+      </button>
+      <button type="button" class="btn-estado-on" data-estado="encendido">
+        Prendido
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<h2>Gráfico de Temperatura</h2>
+<canvas id="graficoTemp" width="500" height="200"></canvas>
+
+<h2>Gráfico de Humedad</h2>
+<canvas id="graficoHum" width="500" height="200"></canvas>
+
+<h2>Gráfico de Volumen</h2>
+<canvas id="graficoVol" width="500" height="200"></canvas>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 {% endblock %}
