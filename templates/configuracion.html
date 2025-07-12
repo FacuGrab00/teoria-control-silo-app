@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración{% endblock %}
+
+{% block content %}
+  <h2>Modo del ventilador</h2>
+  <div class="cards-switches">
+    <div class="card-switch modo-toggle-group">
+      <span>Modo Ventilador</span>
+      <div class="btn-group-modo">
+        <button type="button"
+                class="{% if modo == 'automatico' %}active{% endif %}"
+                data-modo="automatico">
+          Automático
+        </button>
+        <button type="button"
+                class="{% if modo == 'manual' %}active{% endif %}"
+                data-modo="manual">
+          Manual
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor que se habilita/deshabilita según modo -->
+  <div id="config-automatico" class="{% if modo == 'manual' %}config-automatico-deshabilitado{% endif %}">
+
+    <h2>Activar condiciones automáticas</h2>
+    <p>Elegí qué condiciones deben considerarse para encender el ventilador automáticamente:</p>
+
+    <div class="cards-container">
+      <div class="card card-switch-unificada">
+        <div class="card-header">
+          <span>Humedad</span>
+          <label class="switch">
+            <input type="checkbox" id="switch-umbral-humedad" {% if umbrales.humedad %}checked{% endif %} />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="leyenda-umbral-humedad" class="leyenda-umbral">
+          Umbral actual: {{ parametros.umbral_humedad }} %
+        </div>
+      </div>
+
+      <div class="card card-switch-unificada">
+        <div class="card-header">
+          <span>Temperatura</span>
+          <label class="switch">
+            <input type="checkbox" id="switch-umbral-temperatura" {% if umbrales.temperatura %}checked{% endif %} />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="leyenda-umbral-temperatura" class="leyenda-umbral">
+          Umbral actual: {{ parametros.umbral_temperatura }} °C
+        </div>
+      </div>
+
+      <div class="card card-switch-unificada">
+        <div class="card-header">
+          <span>Volumen</span>
+          <label class="switch">
+            <input type="checkbox" id="switch-umbral-volumen" {% if umbrales.volumen %}checked{% endif %} />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="leyenda-umbral-volumen" class="leyenda-umbral">
+          Umbral actual: {{ parametros.umbral_volumen }} m³
+        </div>
+      </div>
+    </div>
+
+    <h2>Ajustar umbrales de activación</h2>
+    <p>Definí los valores a partir de los cuales se considera que hay humedad o temperatura alta, o exceso de volumen.</p>
+
+    <div class="inputs-container">
+      <div class="card">
+        <label for="input-temp">Temperatura (°C) — 
+          <span id="valor-umbral-temp">{{ parametros.umbral_temperatura }} °C</span>
+        </label>
+        <input type="number" id="input-temp" placeholder="Nueva temperatura" />
+      </div>
+
+      <div class="card">
+        <label for="input-hum">Humedad (%) — 
+          <span id="valor-umbral-hum">{{ parametros.umbral_humedad }} %</span>
+        </label>
+        <input type="number" id="input-hum" placeholder="Nueva humedad" />
+      </div>
+
+      <div class="card">
+        <label for="input-dist">Altura (cm) — 
+          <span id="valor-umbral-dist">{{ parametros.umbral_volumen * 100 }} cm</span>
+        </label>
+        <input type="number" id="input-dist" placeholder="Nueva altura (distancia)" />
+      </div>
+    </div>
+
+    <div class="button-container" style="margin-top: 15px;">
+      <button id="enviar-param">Enviar parámetros</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='configuracion.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,10 @@
+<!-- templates/navbar.html -->
+<nav class="navbar">
+  <div class="nav-container">
+    <span class="nav-logo">Silo</span>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="{{ url_for('index') }}" class="nav-link {% if active_page == 'inicio' %}active{% endif %}">Inicio</a></li>
+      <li class="nav-item"><a href="{{ url_for('configuracion') }}" class="nav-link {% if active_page == 'configuracion' %}active{% endif %}">Configuración</a></li>
+    </ul>
+  </div>
+</nav>

@@ -1,45 +1,36 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Lecturas ESP32</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<!-- templates/index.html -->
+{% extends 'base.html' %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block extra_head %}
   <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
   <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
-</head>
-<body>
-  <h1>Lecturas del ESP32</h1>
+{% endblock %}
+
+{% block content %}
+  <h2>Lecturas del ESP32</h2>
 
   <div class="cards-container">
     <div class="card">
-      <h2>Temperatura</h2>
-      <div id="temperatura">-- °C</div>
+      <h3 class="card-title">Temperatura</h2>
+        <div id="temperatura">-- °C</div>
     </div>
 
     <div class="card">
-      <h2>Humedad</h2>
-      <div id="humedad">-- %</div>
+      <h3 class="card-title">Humedad</h2>
+        <div id="humedad">-- %</div>
     </div>
 
     <div class="card">
-      <h2>Altura (Distancia)</h2>
-      <div id="distancia">-- cm</div>
+      <h3 class="card-title">Altura</h2>
+        <div id="distancia">-- cm</div>
     </div>
 
     <div class="card">
-      <h2>Volumen</h2>
-      <div id="volumen">-- m³</div>
+      <h3 class="card-title">Volumen</h2>
+        <div id="volumen">-- m³</div>
     </div>
-  </div>
-
-  <div class="inputs-container">
-    <input type="number" id="input-temp" placeholder="Nueva temperatura">
-    <input type="number" id="input-hum" placeholder="Nueva humedad">
-    <input type="number" id="input-dist" placeholder="Nueva altura (distancia)">
-  </div>
-
-  <div class="button-container">
-    <button id="enviar-param">Enviar parámetros</button>
   </div>
 
   <h2>Gráfico de Temperatura</h2>
@@ -51,15 +42,5 @@
   <h2>Gráfico de Volumen</h2>
   <canvas id="graficoVol" width="500" height="200"></canvas>
 
-  <footer>ESP32 + Flask + MQTT + Socket.IO</footer>
-
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <p id="modal-text">¡Parámetros enviados!</p>
-      <button id="modal-close">Cerrar</button>
-    </div>
-  </div>
-
   <script src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
-</html>
+{% endblock %}

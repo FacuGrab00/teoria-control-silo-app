@@ -1,0 +1,15 @@
+
+body {
+  margin: 0 !important;
+  font-family: sans-serif;
+  background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+  color: #f0faff;
+  text-align: center;
+}
+
+h1, h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #ffffff;
+  text-shadow: 1px 1px 5px #000000aa;
+}

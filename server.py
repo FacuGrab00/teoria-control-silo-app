@@ -6,12 +6,44 @@ from flask_socketio import SocketIO
 import paho.mqtt.client as mqtt
 import json
 import math
-import RPi.GPIO as GPIO
+import db
+
+try:
+    import RPi.GPIO as GPIO
+except (ImportError, RuntimeError):
+    class GPIO:
+        BCM = None
+        OUT = None
+        HIGH = 1
+        LOW = 0
+        @staticmethod
+        def setmode(mode):
+            print("GPIO setmode mock")
+        @staticmethod
+        def setup(pin, mode):
+            print(f"GPIO setup mock pin {pin}")
+        @staticmethod
+        def output(pin, state):
+            print(f"GPIO output mock pin {pin}, state {state}")
+        @staticmethod
+        def cleanup():
+            print("GPIO cleanup mock")
+
+from enum import Enum
 
 app = Flask(__name__)
+
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Datos
+class ModoVentilador(Enum):
+    AUTOMATICO = 1
+    MANUAL = 2
+
+class EstadoVentilador(Enum):
+    ENCENDIDO = 1
+    APAGADO = 2
+
+# Variables globales
 datos_sensores = {
     "humedad": "N/D",
     "temperatura": "N/D",
@@ -19,10 +51,21 @@ datos_sensores = {
     "volumen": "N/D"
 }
 
-# Parámetros
-ALTURA_SILO = 1.0 
-RADIO_SILO = 0.05      
+# Parametros del silo
+ALTURA_SILO = 1.0
+RADIO_SILO = 0.05
+
+# Umbrales con valores por defecto
 UMBRAL_HUMEDAD = 50
+UMBRAL_TEMPERATURA = 30
+UMBRAL_VOLUMEN = 0.2
+
+# Flags para activar/desactivar umbrales en condición automática
+ACTIVO_HUMEDAD = True
+ACTIVO_TEMPERATURA = True
+ACTIVO_VOLUMEN = False
+
+modo_ventilador = ModoVentilador.AUTOMATICO
 
 # GPIO setup
 GPIO.setmode(GPIO.BCM)
@@ -30,18 +73,30 @@ PIN_RELE = 17
 GPIO.setup(PIN_RELE, GPIO.OUT)
 GPIO.output(PIN_RELE, GPIO.LOW)
 
-# MQTT callbacks
+def controlar_ventilador(humedad=None, temperatura=None, volumen=None):
+    if modo_ventilador != ModoVentilador.AUTOMATICO:
+        print("⚙️ Modo manual")
+        return
+
+    encender = False
+
+    if ACTIVO_HUMEDAD and humedad is not None and humedad >= UMBRAL_HUMEDAD:
+        encender = True
+    if ACTIVO_TEMPERATURA and temperatura is not None and temperatura >= UMBRAL_TEMPERATURA:
+        encender = True
+    if ACTIVO_VOLUMEN and volumen is not None and volumen >= UMBRAL_VOLUMEN:
+        encender = True
+
+    if encender:
+        GPIO.output(PIN_RELE, GPIO.HIGH)
+        print("Ventilador ENCENDIDO (automático)")
+    else:
+        GPIO.output(PIN_RELE, GPIO.LOW)
+        print("Ventilador APAGADO (automático)")
+
 def on_connect(client, userdata, flags, rc, properties=None):
     print("✅ Conectado MQTT. Código:", rc)
     client.subscribe("sensor/#")
-
-def controlar_ventilador(humedad):
-    if humedad >= UMBRAL_HUMEDAD:
-        GPIO.output(PIN_RELE, GPIO.HIGH)
-        print("💨 Ventilador ENCENDIDO")
-    else:
-        GPIO.output(PIN_RELE, GPIO.LOW)
-        print("💨 Ventilador APAGADO")
 
 def on_message(client, userdata, msg):
     payload = msg.payload.decode()
@@ -55,11 +110,12 @@ def on_message(client, userdata, msg):
 
     if topic == "sensor/dht22":
         humedad = float(data.get("humedad", 0))
+        temperatura = float(data.get("temperatura", 0))
         datos_sensores["humedad"] = humedad
-        datos_sensores["temperatura"] = data.get("temperatura", "N/D")
-
-        controlar_ventilador(humedad)
-
+        datos_sensores["temperatura"] = temperatura
+        db.insertar_lectura("dht22", "humedad", humedad, "%")
+        db.insertar_lectura("dht22", "temperatura", temperatura, "°C")
+        controlar_ventilador(humedad=humedad, temperatura=temperatura)
     elif topic == "sensor/distancia":
         distancia = float(data.get("distancia", 0))
         datos_sensores["distancia"] = distancia
@@ -70,10 +126,15 @@ def on_message(client, userdata, msg):
 
         area_base = math.pi * RADIO_SILO**2
         volumen = area_base * altura_material
-        datos_sensores["volumen"] = round(volumen, 2)
+        volumen = round(volumen, 2)
+        datos_sensores["volumen"] = volumen
+        db.insertar_lectura("ultrasonico", "distancia", distancia, "cm")
+        db.insertar_lectura("ultrasonico", "volumen", volumen, "m³")
+        controlar_ventilador(volumen=volumen)
 
     socketio.emit('nuevos_datos', datos_sensores)
 
+# MQTT setup
 client = mqtt.Client(protocol=mqtt.MQTTv5)
 client.on_connect = on_connect
 client.on_message = on_message
@@ -82,16 +143,153 @@ client.loop_start()
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html", active_page="inicio")
 
-@socketio.on('parametros_actualizados')
-def manejar_parametros(data):
+@app.route('/configuracion')
+def configuracion():
+    parametros = {
+        "umbral_humedad": UMBRAL_HUMEDAD,
+        "umbral_temperatura": UMBRAL_TEMPERATURA,
+        "umbral_volumen": UMBRAL_VOLUMEN
+    }
+    umbrales = {
+        "humedad": ACTIVO_HUMEDAD,
+        "temperatura": ACTIVO_TEMPERATURA,
+        "volumen": ACTIVO_VOLUMEN
+    }
+    modo = modo_ventilador.name.lower()
+
+    return render_template("configuracion.html", 
+        active_page="configuracion",
+        parametros=parametros,
+        umbrales=umbrales,
+        modo=modo
+    )
+
+@app.route('/parametros', methods=['GET'])
+def obtener_parametros():
+    return {
+        "altura_silo": ALTURA_SILO,
+        "radio_silo": RADIO_SILO,
+        "umbral_humedad": UMBRAL_HUMEDAD,
+        "umbral_temperatura": UMBRAL_TEMPERATURA,
+        "umbral_volumen": UMBRAL_VOLUMEN
+    }, 200
+
+@app.route('/parametros', methods=['POST'])
+def actualizar_parametros():
+    global ALTURA_SILO, RADIO_SILO
+    global UMBRAL_HUMEDAD, UMBRAL_TEMPERATURA, UMBRAL_VOLUMEN
+
+    data = request.json
+    if not data:
+        return {"error": "Faltan datos JSON"}, 400
+
+    if "altura_silo" in data:
+        ALTURA_SILO = float(data["altura_silo"])
+    if "radio_silo" in data:
+        RADIO_SILO = float(data["radio_silo"])
+    if "umbral_humedad" in data:
+        UMBRAL_HUMEDAD = float(data["umbral_humedad"])
+    if "umbral_temperatura" in data:
+        UMBRAL_TEMPERATURA = float(data["umbral_temperatura"])
+    if "umbral_volumen" in data:
+        UMBRAL_VOLUMEN = float(data["umbral_volumen"])
+
+    return {
+        "mensaje": "Parámetros y umbrales actualizados",
+        "valores": {
+            "altura_silo": ALTURA_SILO,
+            "radio_silo": RADIO_SILO,
+            "umbral_humedad": UMBRAL_HUMEDAD,
+            "umbral_temperatura": UMBRAL_TEMPERATURA,
+            "umbral_volumen": UMBRAL_VOLUMEN,
+        }
+    }, 200
+
+@app.route('/umbrales', methods=['GET'])
+def obtener_activacion_umbrales():
+    return {
+        "humedad": ACTIVO_HUMEDAD,
+        "temperatura": ACTIVO_TEMPERATURA,
+        "volumen": ACTIVO_VOLUMEN
+    }, 200
+
+@app.route('/umbrales', methods=['POST'])
+def activar_umbrales():
+    global ACTIVO_HUMEDAD, ACTIVO_TEMPERATURA, ACTIVO_VOLUMEN
+
+    data = request.json
+    if not data:
+        return {"error": "Faltan datos JSON"}, 400
+
+    if "humedad" in data:
+        ACTIVO_HUMEDAD = bool(data["humedad"])
+    if "temperatura" in data:
+        ACTIVO_TEMPERATURA = bool(data["temperatura"])
+    if "volumen" in data:
+        ACTIVO_VOLUMEN = bool(data["volumen"])
+
+    return {
+        "mensaje": "Activación de umbrales actualizada",
+        "activados": {
+            "humedad": ACTIVO_HUMEDAD,
+            "temperatura": ACTIVO_TEMPERATURA,
+            "volumen": ACTIVO_VOLUMEN
+        }
+    }, 200
+
+@app.route('/modo_ventilador', methods=['GET'])
+def obtener_modo_ventilador():
+    return {
+        "modo": modo_ventilador.value,
+        "nombre": modo_ventilador.name.lower()
+    }
+
+@app.route('/modo_ventilador', methods=['POST'])
+def cambiar_modo_ventilador():
+    global modo_ventilador
+
+    data = request.json
+    
+    if not data or "modo" not in data:
+        return {"error": "Falta campo 'modo'"}, 400
+
     try:
-        humedad = float(data.get("humedad", 0))
-        controlar_ventilador(humedad)
-        print(f"💻 Humedad manual recibida: {humedad}")
-    except Exception as e:
-        print("❌ Error humedad manual:", e)
+        modo_ventilador = ModoVentilador(data["modo"])
+    except ValueError:
+        opciones = {e.value: e.name.lower() for e in ModoVentilador}
+        return {
+            "error": f"Modo inválido. Use uno de: {opciones}"
+        }, 400
+
+    GPIO.output(PIN_RELE, GPIO.LOW)
+    
+    return {
+        "mensaje": f"Modo {modo_ventilador.name.lower()} activado",
+        "modo": modo_ventilador.value
+    }
+
+@app.route('/ventilador', methods=['POST'])
+def controlar_ventilador():
+    if modo_ventilador != ModoVentilador.MANUAL:
+        return {"error": "El ventilador está en modo automático. No se puede controlar manualmente."}, 400
+
+    data = request.json
+    if not data or "estado" not in data:
+        return {"error": "Falta campo 'estado'"}, 400
+
+    try:
+        estado = EstadoVentilador(data["estado"])
+    except ValueError:
+        return {"error": "Valor inválido para 'estado'. Use 'encendido: (1)' o 'apagado: (2)'."}, 400
+
+    if estado == EstadoVentilador.ENCENDIDO:
+        GPIO.output(PIN_RELE, GPIO.HIGH)
+        return {"mensaje": "Ventilador ENCENDIDO"}
+    else:
+        GPIO.output(PIN_RELE, GPIO.LOW)
+        return {"mensaje": "Ventilador APAGADO"}
 
 if __name__ == "__main__":
     try:
@@ -99,3 +297,4 @@ if __name__ == "__main__":
         socketio.run(app, host="0.0.0.0", port=5000)
     finally:
         GPIO.cleanup()
+        db.cerrar_conexion()

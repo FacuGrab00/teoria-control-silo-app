@@ -1,0 +1,77 @@
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 45px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #00d1b2;
+}
+
+input:checked + .slider:before {
+  transform: translateX(21px);
+}
+
+input[type="checkbox"] {
+  transition: all 0.3s ease;
+}
+
+/* Estado especial para contenedor de config automatico */
+.config-automatico-deshabilitado {
+  background-color: rgba(0, 209, 178, 0.05);
+  border: 2px dashed #00a896;
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 15px;
+  opacity: 0.95;
+  filter: none;
+  /* pointer-events: none; */
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.config-automatico-deshabilitado::before {
+  content: "ℹ️ El ventilador está en modo manual. Los cambios no se aplicarán.";
+  position: absolute;
+  top: -28px;
+  left: 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #004d4f;
+  text-shadow: none;
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  white-space: nowrap;
+  user-select: none;
+}

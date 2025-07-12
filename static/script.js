@@ -1,23 +1,23 @@
-const socket = io('http://192.168.4.1:5000')
+const socket = io('http://localhost:5000');
 
-const tempDiv = document.getElementById('temperatura')
-const humDiv = document.getElementById('humedad')
-const distDiv = document.getElementById('distancia')
-const volumenDiv = document.getElementById('volumen')
+const $tempDiv = $('#temperatura');
+const $humDiv = $('#humedad');
+const $distDiv = $('#distancia');
+const $volumenDiv = $('#volumen');
 
-// ✅ Arrays
-const datosTemperatura = []
-const datosHumedad = []
-const datosDistancia = []
-const datosVolumen = []
-const etiquetas = []
+// Arrays para gráficas
+const datosTemperatura = [];
+const datosHumedad = [];
+const datosDistancia = [];
+const datosVolumen = [];
+const etiquetas = [];
 
 // Parámetros silo
-const ALTURA_SILO = 1.0
-const RADIO_SILO = 0.05  // ✅ CORREGIDO a 5 cm
+let ALTURA_SILO = 1.0;
+let RADIO_SILO = 0.05;
 
-// ✅ Gráfico temperatura
-const ctxTemp = document.getElementById('graficoTemp').getContext('2d')
+// Gráficos Chart.js
+const ctxTemp = $('#graficoTemp')[0].getContext('2d');
 const chartTemp = new Chart(ctxTemp, {
   type: 'line',
   data: {
@@ -38,10 +38,9 @@ const chartTemp = new Chart(ctxTemp, {
       y: { beginAtZero: false }
     }
   }
-})
+});
 
-// ✅ Gráfico humedad
-const ctxHum = document.getElementById('graficoHum').getContext('2d')
+const ctxHum = $('#graficoHum')[0].getContext('2d');
 const chartHum = new Chart(ctxHum, {
   type: 'line',
   data: {
@@ -62,10 +61,9 @@ const chartHum = new Chart(ctxHum, {
       y: { beginAtZero: true }
     }
   }
-})
+});
 
-// ✅ Gráfico volumen
-const ctxVol = document.getElementById('graficoVol').getContext('2d')
+const ctxVol = $('#graficoVol')[0].getContext('2d');
 const chartVol = new Chart(ctxVol, {
   type: 'line',
   data: {
@@ -86,97 +84,49 @@ const chartVol = new Chart(ctxVol, {
       y: { beginAtZero: true }
     }
   }
-})
+});
 
-// ✅ MQTT: Recibir datos en vivo
+// Actualizar datos al recibirlos por socket
 socket.on('nuevos_datos', data => {
-  const now = new Date().toLocaleTimeString()
+  const now = new Date().toLocaleTimeString();
 
-  etiquetas.push(now)
-  datosTemperatura.push(Number(data.temperatura))
-  datosHumedad.push(Number(data.humedad))
-  datosDistancia.push(Number(data.distancia))
+  etiquetas.push(now);
+  datosTemperatura.push(Number(data.temperatura));
+  datosHumedad.push(Number(data.humedad));
+  datosDistancia.push(Number(data.distancia));
 
-  // Convertir distancia a metros
-  const distEnMetros = Number(data.distancia) / 100
-  const alturaMaterial = ALTURA_SILO - distEnMetros
-  const volumen = Math.PI * Math.pow(RADIO_SILO, 2) * alturaMaterial
-  datosVolumen.push(volumen.toFixed(2))
-
-  if (etiquetas.length > 20) {
-    etiquetas.shift()
-    datosTemperatura.shift()
-    datosHumedad.shift()
-    datosDistancia.shift()
-    datosVolumen.shift()
-  }
-
-  tempDiv.innerText = data.temperatura + " °C"
-  humDiv.innerText = data.humedad + " %"
-  distDiv.innerText = data.distancia + " cm"
-  volumenDiv.innerText = volumen.toFixed(2) + " m³"
-
-  chartTemp.update()
-  chartHum.update()
-  chartVol.update()
-})
-
-// ✅ Enviar datos manuales (local)
-document.getElementById('enviar-param').addEventListener('click', () => {
-  const temp = document.getElementById('input-temp').value
-  const hum = document.getElementById('input-hum').value
-  const dist = document.getElementById('input-dist').value
-
-  const ultimaTemp = datosTemperatura.length ? datosTemperatura[datosTemperatura.length - 1] : 0
-  const ultimaHum = datosHumedad.length ? datosHumedad[datosHumedad.length - 1] : 0
-  const ultimaDist = datosDistancia.length ? datosDistancia[datosDistancia.length - 1] : 0
-  const ultimaVol = datosVolumen.length ? datosVolumen[datosVolumen.length - 1] : 0
-
-  const nuevaTemp = temp !== '' ? Number(temp) : ultimaTemp
-  const nuevaHum = hum !== '' ? Number(hum) : ultimaHum
-  const nuevaDist = dist !== '' ? Number(dist) : ultimaDist
-
-  // Convertir distancia a metros
-  const distEnMetros = nuevaDist / 100
-  const alturaMaterial = ALTURA_SILO - distEnMetros
-  const nuevoVolumen = Math.PI * Math.pow(RADIO_SILO, 2) * alturaMaterial
-
-  const now = new Date().toLocaleTimeString()
-
-  etiquetas.push(now)
-  datosTemperatura.push(nuevaTemp)
-  datosHumedad.push(nuevaHum)
-  datosDistancia.push(nuevaDist)
-  datosVolumen.push(nuevoVolumen.toFixed(2))
+  const distEnMetros = Number(data.distancia) / 100;
+  const alturaMaterial = ALTURA_SILO - distEnMetros;
+  const volumen = Math.PI * Math.pow(RADIO_SILO, 2) * alturaMaterial;
+  datosVolumen.push(volumen.toFixed(2));
 
   if (etiquetas.length > 20) {
-    etiquetas.shift()
-    datosTemperatura.shift()
-    datosHumedad.shift()
-    datosDistancia.shift()
-    datosVolumen.shift()
+    etiquetas.shift();
+    datosTemperatura.shift();
+    datosHumedad.shift();
+    datosDistancia.shift();
+    datosVolumen.shift();
   }
 
-  tempDiv.innerText = nuevaTemp + " °C"
-  humDiv.innerText = nuevaHum + " %"
-  distDiv.innerText = nuevaDist + " cm"
-  volumenDiv.innerText = nuevoVolumen.toFixed(2) + " m³"
+  $tempDiv.text(data.temperatura + " °C");
+  $humDiv.text(data.humedad + " %");
+  $distDiv.text(data.distancia + " cm");
+  $volumenDiv.text(volumen.toFixed(2) + " m³");
 
-  chartTemp.update()
-  chartHum.update()
-  chartVol.update()
+  chartTemp.update();
+  chartHum.update();
+  chartVol.update();
+});
 
-  // ✅ Modal
-  const modal = document.getElementById('modal')
-  modal.style.display = "block"
+// Ejecutar al cargar la página
+$(document).ready(async () => {
+  try {
+    const resParametros = await fetch('/parametros');
+    const parametros = await resParametros.json();
 
-  document.getElementById('modal-close').onclick = function() {
-    modal.style.display = "none"
+    ALTURA_SILO = parametros.altura_silo;
+    RADIO_SILO = parametros.radio_silo;
+  } catch (e) {
+    console.error('Error cargando parámetros iniciales:', e);
   }
-
-  window.onclick = function(event) {
-    if (event.target == modal) {
-      modal.style.display = "none"
-    }
-  }
-})
+});
