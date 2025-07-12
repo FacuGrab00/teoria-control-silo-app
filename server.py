@@ -74,6 +74,8 @@ def controlar_ventilador_automatico(humedad=None, temperatura=None, volumen=None
 
     encender = False
 
+    print("Evaluando condición de encendido")
+
     if ACTIVO_HUMEDAD and humedad is not None and humedad >= UMBRAL_HUMEDAD:
         encender = True
     if ACTIVO_TEMPERATURA and temperatura is not None and temperatura >= UMBRAL_TEMPERATURA:
