@@ -67,7 +67,7 @@ PIN_RELE = 17
 GPIO.setup(PIN_RELE, GPIO.OUT)
 GPIO.output(PIN_RELE, GPIO.LOW)
 
-def controlar_ventilador(humedad=None, temperatura=None, volumen=None):
+def controlar_ventilador_automatico(humedad=None, temperatura=None, volumen=None):
     if modo_ventilador != ModoVentilador.AUTOMATICO:
         print("⚙️ Modo manual")
         return
@@ -284,7 +284,7 @@ def cambiar_modo_ventilador():
     }
 
 @app.route('/ventilador', methods=['POST'])
-def controlar_ventilador():
+def controlar_ventilador_manual():
     if modo_ventilador != ModoVentilador.MANUAL:
         return {"error": "El ventilador está en modo automático. No se puede controlar manualmente."}, 400
 
